@@ -1,0 +1,436 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Bot Control</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg:#0a0b0f; --surface:#111318; --card:#161921; --border:#1e2330;
+    --accent:#5865f2; --accent2:#57f287; --danger:#ed4245; --warn:#faa61a;
+    --text:#e3e5e8; --muted:#72767d; --online:#57f287; --offline:#ed4245; --starting:#faa61a;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;}
+  body{background:var(--bg);color:var(--text);font-family:'IBM Plex Sans Arabic',sans-serif;min-height:100vh;}
+
+  /* LOGIN */
+  #login-screen{display:flex;align-items:center;justify-content:center;min-height:100vh;padding:24px;}
+  .login-box{background:var(--surface);border:1px solid var(--border);border-radius:24px;padding:44px 36px;width:100%;max-width:380px;text-align:center;}
+  .login-icon{width:68px;height:68px;background:linear-gradient(135deg,#5865f2,#7289da);border-radius:20px;display:flex;align-items:center;justify-content:center;font-size:30px;margin:0 auto 22px;box-shadow:0 8px 32px rgba(88,101,242,0.35);}
+  .login-box h2{font-size:22px;font-weight:700;margin-bottom:6px;}
+  .login-box p{color:var(--muted);font-size:13px;margin-bottom:30px;}
+  .input-wrap{position:relative;margin-bottom:12px;}
+  .input-wrap input{width:100%;background:var(--card);border:1px solid var(--border);border-radius:12px;padding:14px 16px 14px 44px;color:var(--text);font-family:inherit;font-size:15px;outline:none;transition:border-color .2s;text-align:right;}
+  .input-wrap input:focus{border-color:var(--accent);}
+  .input-wrap input.wrong{border-color:var(--danger);animation:shake .35s ease;}
+  .eye-btn{position:absolute;left:14px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;font-size:16px;color:var(--muted);}
+  @keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-7px)}75%{transform:translateX(7px)}}
+  .login-btn{width:100%;background:var(--accent);color:#fff;border:none;border-radius:12px;padding:14px;font-family:inherit;font-size:15px;font-weight:600;cursor:pointer;transition:all .15s;margin-top:6px;}
+  .login-btn:hover{background:#4752c4;}
+  .error-msg{color:var(--danger);font-size:12px;margin-top:12px;min-height:18px;}
+
+  /* DASHBOARD */
+  #dashboard{display:none;padding:20px 16px 60px;}
+  #dashboard.active{display:block;}
+  .logout-btn{position:fixed;top:14px;left:14px;background:rgba(237,66,69,0.1);color:var(--danger);border:1px solid rgba(237,66,69,0.2);border-radius:8px;padding:7px 14px;font-family:inherit;font-size:12px;font-weight:600;cursor:pointer;z-index:100;transition:all .15s;}
+  .logout-btn:hover{background:rgba(237,66,69,0.2);}
+  .wrapper{max-width:900px;margin:0 auto;}
+
+  header{text-align:center;margin-bottom:28px;padding-top:8px;}
+  .logo{display:inline-flex;align-items:center;gap:12px;background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:11px 22px;margin-bottom:16px;}
+  .logo-icon{width:34px;height:34px;background:var(--accent);border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:16px;}
+  .logo-text{font-size:17px;font-weight:700;}
+  h1{font-size:24px;font-weight:700;letter-spacing:-1px;margin-bottom:4px;}
+  .subtitle{color:var(--muted);font-size:13px;}
+
+  /* SEARCH */
+  .search-bar{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:14px 18px;margin-bottom:18px;display:flex;align-items:center;gap:10px;}
+  .search-bar input{background:none;border:none;outline:none;color:var(--text);font-family:inherit;font-size:14px;flex:1;text-align:right;}
+  .search-bar input::placeholder{color:var(--muted);}
+  .search-icon{color:var(--muted);font-size:16px;}
+
+  /* GLOBAL BAR */
+  .global-bar{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:16px 20px;margin-bottom:20px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;}
+  .global-label{font-size:12px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:1px;}
+  .global-btns{display:flex;gap:8px;flex-wrap:wrap;}
+
+  /* BUTTONS */
+  .btn{display:inline-flex;align-items:center;gap:6px;padding:9px 16px;border-radius:10px;border:none;font-family:inherit;font-size:13px;font-weight:600;cursor:pointer;transition:all .15s;white-space:nowrap;}
+  .btn:active{transform:scale(0.96);}
+  .btn:disabled{opacity:.4;cursor:not-allowed;transform:none;}
+  .btn-start{background:rgba(87,242,135,0.1);color:var(--accent2);border:1px solid rgba(87,242,135,0.2);}
+  .btn-start:hover:not(:disabled){background:rgba(87,242,135,0.18);}
+  .btn-stop{background:rgba(237,66,69,0.1);color:var(--danger);border:1px solid rgba(237,66,69,0.2);}
+  .btn-stop:hover:not(:disabled){background:rgba(237,66,69,0.18);}
+  .btn-restart{background:rgba(250,166,26,0.1);color:var(--warn);border:1px solid rgba(250,166,26,0.2);}
+  .btn-restart:hover:not(:disabled){background:rgba(250,166,26,0.18);}
+  .btn-refresh{background:rgba(88,101,242,0.1);color:var(--accent);border:1px solid rgba(88,101,242,0.2);}
+  .btn-refresh:hover:not(:disabled){background:rgba(88,101,242,0.18);}
+  .btn-add{background:rgba(87,242,135,0.12);color:var(--accent2);border:1px solid rgba(87,242,135,0.25);padding:10px 20px;}
+  .btn-add:hover{background:rgba(87,242,135,0.2);}
+  .btn-danger{background:rgba(237,66,69,0.1);color:var(--danger);border:1px solid rgba(237,66,69,0.2);padding:6px 12px;font-size:12px;}
+  .btn-danger:hover{background:rgba(237,66,69,0.2);}
+
+  /* SERVER CARD */
+  .servers-grid{display:flex;flex-direction:column;gap:10px;}
+  .server-card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:18px 20px;transition:border-color .2s;}
+  .server-card:hover{border-color:rgba(88,101,242,0.28);}
+  .card-top{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:12px;}
+  .server-info{display:flex;align-items:center;gap:10px;}
+  .status-dot{width:9px;height:9px;border-radius:50%;background:var(--muted);flex-shrink:0;transition:all .3s;}
+  .status-dot.online{background:var(--online);box-shadow:0 0 7px rgba(87,242,135,.55);animation:pulse 2s infinite;}
+  .status-dot.offline{background:var(--offline);}
+  .status-dot.starting{background:var(--starting);animation:blink .75s infinite;}
+  @keyframes pulse{0%,100%{box-shadow:0 0 7px rgba(87,242,135,.5)}50%{box-shadow:0 0 13px rgba(87,242,135,.8)}}
+  @keyframes blink{0%,100%{opacity:1}50%{opacity:.25}}
+  .server-name{font-size:15px;font-weight:600;}
+  .server-host-tag{font-size:10px;color:var(--muted);background:rgba(114,118,125,0.1);border:1px solid rgba(114,118,125,0.2);padding:2px 8px;border-radius:6px;}
+  .status-badge{font-size:10px;font-weight:700;padding:3px 9px;border-radius:20px;background:rgba(114,118,125,0.12);color:var(--muted);border:1px solid rgba(114,118,125,0.18);transition:all .3s;}
+  .status-badge.online{background:rgba(87,242,135,.08);color:var(--online);border-color:rgba(87,242,135,.22);}
+  .status-badge.offline{background:rgba(237,66,69,.08);color:var(--danger);border-color:rgba(237,66,69,.22);}
+  .status-badge.starting{background:rgba(250,166,26,.08);color:var(--warn);border-color:rgba(250,166,26,.22);}
+  .card-actions{display:flex;gap:7px;flex-wrap:wrap;align-items:center;}
+  .card-actions .btn{padding:7px 13px;font-size:12px;}
+
+  /* ADD MODAL */
+  .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:200;display:flex;align-items:center;justify-content:center;padding:20px;backdrop-filter:blur(4px);}
+  .modal-overlay.hidden{display:none;}
+  .modal{background:var(--surface);border:1px solid var(--border);border-radius:20px;padding:28px 24px;width:100%;max-width:420px;}
+  .modal h3{font-size:18px;font-weight:700;margin-bottom:20px;}
+  .field{margin-bottom:14px;}
+  .field label{display:block;font-size:12px;font-weight:600;color:var(--muted);margin-bottom:6px;text-transform:uppercase;letter-spacing:.5px;}
+  .field input{width:100%;background:var(--card);border:1px solid var(--border);border-radius:10px;padding:11px 14px;color:var(--text);font-family:inherit;font-size:14px;outline:none;transition:border-color .2s;text-align:right;}
+  .field input:focus{border-color:var(--accent);}
+  .modal-btns{display:flex;gap:10px;margin-top:20px;}
+  .btn-save{flex:1;background:var(--accent);color:#fff;border:none;border-radius:10px;padding:12px;font-family:inherit;font-size:14px;font-weight:600;cursor:pointer;transition:all .15s;}
+  .btn-save:hover{background:#4752c4;}
+  .btn-cancel{background:rgba(114,118,125,0.1);color:var(--muted);border:1px solid rgba(114,118,125,0.2);border-radius:10px;padding:12px 18px;font-family:inherit;font-size:14px;font-weight:600;cursor:pointer;}
+
+  /* EMPTY */
+  .empty-state{text-align:center;padding:48px 20px;color:var(--muted);}
+  .empty-state .icon{font-size:48px;margin-bottom:12px;}
+  .empty-state p{font-size:14px;}
+
+  /* TOAST */
+  #toast-container{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);z-index:9999;display:flex;flex-direction:column;gap:7px;align-items:center;pointer-events:none;}
+  .toast{background:#1a1d25;border:1px solid var(--border);color:var(--text);padding:11px 20px;border-radius:12px;font-size:13px;font-weight:500;white-space:nowrap;opacity:0;transform:translateY(8px);transition:all .22s ease;max-width:90vw;text-align:center;}
+  .toast.show{opacity:1;transform:translateY(0);}
+  .toast.success{border-color:rgba(87,242,135,.3);color:var(--online);}
+  .toast.error{border-color:rgba(237,66,69,.3);color:var(--danger);}
+  .toast.info{border-color:rgba(250,166,26,.3);color:var(--warn);}
+
+  .section-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;}
+  .section-title{font-size:13px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:1px;}
+  .count-badge{font-size:11px;background:rgba(88,101,242,0.15);color:var(--accent);border:1px solid rgba(88,101,242,0.25);padding:2px 8px;border-radius:10px;}
+
+  @media(max-width:500px){
+    .global-bar{flex-direction:column;align-items:flex-start;}
+    .card-top{flex-direction:column;align-items:flex-start;}
+  }
+</style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div id="login-screen">
+  <div class="login-box">
+    <div class="login-icon">🤖</div>
+    <h2>Bot Control</h2>
+    <p>أدخل كلمة السر للدخول</p>
+    <div class="input-wrap">
+      <input type="password" id="pw-input" placeholder="كلمة السر" onkeydown="if(event.key==='Enter')doLogin()">
+      <button class="eye-btn" onclick="toggleEye()" id="eye-btn">👁</button>
+    </div>
+    <button class="login-btn" onclick="doLogin()">دخول</button>
+    <div class="error-msg" id="err-msg"></div>
+  </div>
+</div>
+
+<!-- DASHBOARD -->
+<div id="dashboard">
+  <button class="logout-btn" onclick="doLogout()">🚪 خروج</button>
+  <div class="wrapper">
+    <header>
+      <div class="logo">
+        <div class="logo-icon">🤖</div>
+        <div class="logo-text">Bot Control</div>
+      </div>
+      <h1>لوحة تحكم البوتات</h1>
+      <p class="subtitle">تحكم في كل البوتات من مكان واحد</p>
+    </header>
+
+    <!-- SEARCH -->
+    <div class="search-bar">
+      <span class="search-icon">🔍</span>
+      <input type="text" id="search-input" placeholder="ابحث عن بوت..." oninput="renderServers()">
+    </div>
+
+    <!-- GLOBAL -->
+    <div class="global-bar">
+      <span class="global-label">⚡ تحكم شامل</span>
+      <div class="global-btns">
+        <button class="btn btn-start"   onclick="allAction('start')">▶ تشغيل الكل</button>
+        <button class="btn btn-restart" onclick="allAction('restart')">↺ رستارت الكل</button>
+        <button class="btn btn-stop"    onclick="allAction('stop')">■ إيقاف الكل</button>
+        <button class="btn btn-refresh" onclick="loadServers()">⟳ تحديث</button>
+      </div>
+    </div>
+
+    <!-- SERVERS LIST -->
+    <div class="section-header">
+      <span class="section-title">السيرفرات</span>
+      <div style="display:flex;gap:8px;align-items:center;">
+        <span class="count-badge" id="count-badge">0</span>
+        <button class="btn btn-add" onclick="openModal()">+ إضافة هوست</button>
+      </div>
+    </div>
+    <div class="servers-grid" id="servers-grid">
+      <div class="empty-state">
+        <div class="icon">⏳</div>
+        <p>جاري التحميل...</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ADD MODAL -->
+<div class="modal-overlay hidden" id="modal">
+  <div class="modal">
+    <h3>➕ إضافة هوست جديد</h3>
+    <div class="field">
+      <label>اسم البوت</label>
+      <input type="text" id="f-name" placeholder="مثلاً: My Bot">
+    </div>
+    <div class="field">
+      <label>رابط البانل</label>
+      <input type="text" id="f-panel" placeholder="https://panel.example.com">
+    </div>
+    <div class="field">
+      <label>Server ID</label>
+      <input type="text" id="f-serverid" placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx">
+    </div>
+    <div class="field">
+      <label>API Key</label>
+      <input type="text" id="f-apikey" placeholder="ptlc_xxxxxxxxxxxx">
+    </div>
+    <div class="field">
+      <label>اسم الهوست (اختياري)</label>
+      <input type="text" id="f-host" placeholder="مثلاً: bot-hosting.net">
+    </div>
+    <div class="modal-btns">
+      <button class="btn-cancel" onclick="closeModal()">إلغاء</button>
+      <button class="btn-save" onclick="addServer()">💾 حفظ</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast-container"></div>
+
+<script>
+const WORKER_URL = "https://bot-proxy.qysai32324.workers.dev";
+const PASSWORD = "max-ymshrf";
+
+let allServers = [];
+
+// ---- LOGIN ----
+function doLogin() {
+  if (document.getElementById("pw-input").value === PASSWORD) {
+    sessionStorage.setItem("auth","1");
+    document.getElementById("login-screen").style.display = "none";
+    document.getElementById("dashboard").classList.add("active");
+    loadServers();
+  } else {
+    const inp = document.getElementById("pw-input");
+    document.getElementById("err-msg").textContent = "كلمة السر غلط ❌";
+    inp.classList.add("wrong");
+    setTimeout(()=>inp.classList.remove("wrong"),500);
+  }
+}
+function doLogout() {
+  sessionStorage.removeItem("auth");
+  document.getElementById("dashboard").classList.remove("active");
+  document.getElementById("login-screen").style.display = "flex";
+  document.getElementById("pw-input").value = "";
+  document.getElementById("err-msg").textContent = "";
+}
+function toggleEye() {
+  const inp = document.getElementById("pw-input");
+  const btn = document.getElementById("eye-btn");
+  inp.type = inp.type==="password"?"text":"password";
+  btn.textContent = inp.type==="password"?"👁":"🙈";
+}
+if (sessionStorage.getItem("auth")==="1") {
+  document.getElementById("login-screen").style.display="none";
+  document.getElementById("dashboard").classList.add("active");
+}
+
+// ---- API ----
+async function apiGet(path) {
+  const res = await fetch(WORKER_URL+path);
+  return res.json();
+}
+async function apiPost(path, body) {
+  const res = await fetch(WORKER_URL+path, {
+    method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify(body)
+  });
+  return res.json();
+}
+async function apiDelete(path) {
+  const res = await fetch(WORKER_URL+path, { method:"DELETE" });
+  return res.json();
+}
+
+// ---- LOAD SERVERS ----
+async function loadServers() {
+  try {
+    const data = await apiGet("/servers");
+    allServers = data.servers || [];
+    renderServers();
+    allServers.forEach(s => refreshStatus(s.id));
+  } catch(e) {
+    showToast("فشل تحميل السيرفرات ❌","error");
+  }
+}
+
+// ---- RENDER ----
+function renderServers() {
+  const q = document.getElementById("search-input").value.toLowerCase();
+  const filtered = allServers.filter(s =>
+    s.name.toLowerCase().includes(q) ||
+    (s.host||"").toLowerCase().includes(q)
+  );
+  document.getElementById("count-badge").textContent = allServers.length;
+  const grid = document.getElementById("servers-grid");
+  if (filtered.length === 0) {
+    grid.innerHTML = `<div class="empty-state"><div class="icon">${allServers.length===0?"🤖":"🔍"}</div><p>${allServers.length===0?"لا يوجد هوستات، أضف الأول!":"لا توجد نتائج للبحث"}</p></div>`;
+    return;
+  }
+  grid.innerHTML = filtered.map(s => `
+    <div class="server-card" id="card-${s.id}">
+      <div class="card-top">
+        <div class="server-info">
+          <div class="status-dot" id="dot-${s.id}"></div>
+          <span class="server-name">${s.name}</span>
+          ${s.host ? `<span class="server-host-tag">${s.host}</span>` : ""}
+          <span class="status-badge" id="badge-${s.id}">—</span>
+        </div>
+        <div class="card-actions">
+          <button class="btn btn-start"   onclick="serverAction('${s.id}','start','${s.name}')">▶ تشغيل</button>
+          <button class="btn btn-restart" onclick="serverAction('${s.id}','restart','${s.name}')">↺ رستارت</button>
+          <button class="btn btn-stop"    onclick="serverAction('${s.id}','stop','${s.name}')">■ إيقاف</button>
+          <button class="btn btn-danger"  onclick="deleteServer('${s.id}','${s.name}')">🗑</button>
+        </div>
+      </div>
+    </div>
+  `).join("");
+}
+
+// ---- STATUS ----
+function updateStatusUI(id, state) {
+  const dot = document.getElementById(`dot-${id}`);
+  const badge = document.getElementById(`badge-${id}`);
+  if (!dot || !badge) return;
+  dot.className = "status-dot";
+  badge.className = "status-badge";
+  const map = {
+    running:{label:"يعمل ✓",cls:"online"},
+    starting:{label:"يشتغل...",cls:"starting"},
+    stopping:{label:"يوقف...",cls:"starting"},
+    offline:{label:"متوقف",cls:"offline"},
+    error:{label:"خطأ ⚠",cls:"offline"},
+    unknown:{label:"—",cls:""}
+  };
+  const info = map[state]||{label:state,cls:""};
+  badge.textContent = info.label;
+  if(info.cls){dot.classList.add(info.cls);badge.classList.add(info.cls);}
+}
+
+async function refreshStatus(id) {
+  try {
+    const data = await apiGet(`/status/${id}`);
+    updateStatusUI(id, data.state||"unknown");
+  } catch { updateStatusUI(id,"error"); }
+}
+
+// ---- ACTIONS ----
+const actionLabel = {start:"تشغيل",stop:"إيقاف",restart:"رستارت"};
+
+function setCardLoading(id, loading) {
+  const card = document.getElementById(`card-${id}`);
+  if (!card) return;
+  card.querySelectorAll(".btn").forEach(b => b.disabled = loading);
+}
+
+async function serverAction(id, action, name) {
+  setCardLoading(id, true);
+  showToast(`جاري ${actionLabel[action]} ${name}...`,"info");
+  const data = await apiPost(`/power/${id}`, {signal: action});
+  if (data.ok) {
+    showToast(`${name}: تم ✓`,"success");
+    setTimeout(()=>refreshStatus(id), 2000);
+    setTimeout(()=>{refreshStatus(id);setCardLoading(id,false);}, 6000);
+  } else {
+    showToast(`${name}: فشل ❌`,"error");
+    setCardLoading(id, false);
+  }
+}
+
+async function allAction(action) {
+  showToast(`جاري ${actionLabel[action]} جميع البوتات...`,"info");
+  await Promise.all(allServers.map(s => serverAction(s.id, action, s.name)));
+}
+
+// ---- DELETE ----
+async function deleteServer(id, name) {
+  if (!confirm(`هل تريد حذف "${name}"؟`)) return;
+  await apiDelete(`/servers/${id}`);
+  showToast(`${name}: تم الحذف`,"info");
+  await loadServers();
+}
+
+// ---- ADD MODAL ----
+function openModal() {
+  document.getElementById("modal").classList.remove("hidden");
+  document.getElementById("f-name").focus();
+}
+function closeModal() {
+  document.getElementById("modal").classList.add("hidden");
+  ["f-name","f-panel","f-serverid","f-apikey","f-host"].forEach(id => document.getElementById(id).value="");
+}
+async function addServer() {
+  const name = document.getElementById("f-name").value.trim();
+  const panel = document.getElementById("f-panel").value.trim();
+  const serverId = document.getElementById("f-serverid").value.trim();
+  const apiKey = document.getElementById("f-apikey").value.trim();
+  const host = document.getElementById("f-host").value.trim();
+  if (!name||!panel||!serverId||!apiKey) { showToast("املأ جميع الحقول المطلوبة ⚠","error"); return; }
+  showToast("جاري الحفظ...","info");
+  const data = await apiPost("/servers", {name,panel,serverId,apiKey,host});
+  if (data.ok) {
+    showToast(`${name}: تم الإضافة ✓`,"success");
+    closeModal();
+    await loadServers();
+  } else {
+    showToast("فشل الحفظ ❌","error");
+  }
+}
+
+// ---- TOAST ----
+function showToast(msg, type="info") {
+  const el = document.createElement("div");
+  el.className = `toast ${type}`;
+  el.textContent = msg;
+  document.getElementById("toast-container").appendChild(el);
+  requestAnimationFrame(()=>setTimeout(()=>el.classList.add("show"),10));
+  setTimeout(()=>{el.classList.remove("show");setTimeout(()=>el.remove(),300);},3200);
+}
+
+// تحديث تلقائي كل 30 ثانية
+setInterval(()=>{
+  if(sessionStorage.getItem("auth")==="1")
+    allServers.forEach(s=>refreshStatus(s.id));
+},30000);
+</script>
+</body>
+</html>
